@@ -1,0 +1,41 @@
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  height: 100vh;
+  padding: 0 50px;
+  overflow: hidden;
+
+}
+
+/* 공통 */
+.card {
+  width: 30%;
+  max-width: 300px;
+  transform: translateY(-20vh);
+
+}
+
+/* 왼쪽 */
+.left {
+  animation: slideUp 1s ease-out forwards;
+    animation-delay: 0.05s;
+}
+
+/* 오른쪽 (딜레이) */
+.right {
+
+  animation: slideUp 1s ease-out forwards;
+  animation-delay: 0.2s;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(0vh);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(-35vh);
+    opacity: 1;
+  }
+}

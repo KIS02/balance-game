@@ -1,16 +1,25 @@
-/* 카드 컨테이너 (좌우 배치) */
-.choices {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  height: 50%;
 
+/* 카드 컨테이너 (좌우 배치) */
+.title {
+  padding: 5vh;
+
+}
+
+.choices {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100vh;
+  padding: 0 3vh;
+  gap: 5vh;
+  overflow: hidden;
+
 }
 
 /* 공통 카드 */
 .card {
   flex: 1;
+
   display: flex;
   justify-content: center;
   align-items: center;
@@ -19,8 +28,15 @@
   color: white;
   cursor: pointer;
 
-  transition: transform 0.6s ease;
+  width: 30%;
+  max-width: 500px;
+  aspect-ratio: 1 / 1;
+  transform: translateY(-20vh);
+
 }
+
+/* 이미지가 1x1사이즈로 깨지지 않을 때, 까지는
+ 가로세로 배치를 하고 그게 깨질 때 부터 위아래 배치로 바꾸기 */
 
 .card::after {
   content: "";
@@ -34,6 +50,12 @@
   background: rgba(0,0,0,0.4);
 }
 
+.overlay-text {
+  -webkit-text-stroke: 2px black;
+  color: white;
+  ;
+}
+
 /* 텍스트 가독성 */
 .label {
   background: rgba(0,0,0,0.5);
@@ -41,32 +63,84 @@
   border-radius: 10px;
 }
 
-/* 왼쪽 카드 이미지 */
+/* 왼쪽 */
 .left {
-  background-image: url("/img_1.png");
+  background-image: url("/public/img_1.png");
   background-size: cover;
   background-position: center;
+  animation: slideUpChoices 1s ease-out forwards;
+  animation-delay: 0.05s;
 }
 
-/* 오른쪽 카드 이미지 */
+/* 오른쪽 (딜레이) */
 .right {
-  background-image: url("/img_2.png");
+  background-image: url("/public/img_2.png");
   background-size: cover;
   background-position: center;
+  animation: slideUpChoices 1s ease-out forwards;
+  animation-delay: 0.2s;
 }
 
-/* 올라오는 상태 */
-.left.show {
-  transform: translateY(0);
-  transition-delay: 0.05s;
+@keyframes slideUpChoices {
+  from {
+    transform: translateY(40vh);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(-20vh);
+    opacity: 1;
+  }
 }
 
-.right.show {
-  transform: translateY(0);
-  transition-delay: 0.2s;
+@keyframes slideUpResult {
+  from {
+    transform: translateY(40vh);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0vh);
+    opacity: 1;
+  }
 }
 
-/* hover */
-.card:hover {
-  opacity: 0.9;
+
+.result-image{
+  background-image: url("/public/img_3.png");
+  background-size: cover;
+  background-position: center;
+  
+  width: 80%;
+  aspect-ratio: 1 / 1;
+}
+
+.nextButton{
+
+  width: 30%;
+  max-width: 500px;
+}
+
+.result-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.result-box {
+  background-color: white;
+
+  width: 60%;
+  aspect-ratio: 1 / 1;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  flex-direction: column;
+  animation: slideUpResult 0.5s ease-out forwards;
 }

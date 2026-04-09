@@ -58,15 +58,24 @@ function App() {
       {showResult && (
         <div className="result-overlay">
           <div className="result-box">
-            <h2>결과</h2>
+            <div className="result-title">결과</div>
 
             <div className="result-image"/>
-
-            <p>네이버: {aPercent}%</p>
-            <p>카카오: {bPercent}%</p>
-
+            <div className="result-answer">
+              <div className="result-font">
+                <p>네이버</p>
+                <p>{aPercent}%</p>
+              </div>
+              <div className="result-font">
+                <p>vs</p>
+              </div>
+              <div className="result-font">
+                <p>카카오</p>
+                <p>{bPercent}%</p>
+              </div>
+            </div>
             <button className="nextButton" onClick={nextQuestion}>
-              다음 문제 →
+              다음 문제
             </button>
           </div>
         </div>

@@ -35,8 +35,9 @@
   width: 30%;
   max-width: 500px;
   aspect-ratio: 1 / 1;
-  transform: translateY(-20vh);
 
+  transform: translateY(40vh);
+  opacity: 0;
 }
 
 /* 이미지가 1x1사이즈로 깨지지 않을 때, 까지는
@@ -57,7 +58,7 @@
 .overlay-text {
   -webkit-text-stroke: 2px black;
   color: white;
-  ;
+  font-weight: bold;
 }
 
 /* 텍스트 가독성 */
@@ -67,22 +68,41 @@
   border-radius: 10px;
 }
 
-/* 왼쪽 */
-.left {
-  background-image: url("/public/img_1.png");
-  background-size: cover;
-  background-position: center;
+/* 이미지 애니메이션 */
+.left.show {
   animation: slideUpChoices 1s ease-out forwards;
   animation-delay: 0.05s;
 }
 
-/* 오른쪽 (딜레이) */
-.right {
-  background-image: url("/public/img_2.png");
-  background-size: cover;
-  background-position: center;
+.right.show {
   animation: slideUpChoices 1s ease-out forwards;
   animation-delay: 0.2s;
+}
+
+.card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* background-size: cover와 동일한 역할 */
+}
+
+.overlay-text {
+  position: absolute;
+  /* 1. 위치 설정: 중앙에 두고 싶을 때 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* 정확한 중앙 정렬 */
+
+  /* 3. 글자 크기에 맞춰 배경 입히기 */
+  padding: 2cqw 2cqw;          /* 위아래 10px, 좌우 20px 여백으로 배경 크기 조절 */
+  background-color: rgba(0, 0, 0, 0.3); /* 배경을 조금 더 진하게 하면 잘 보입니다 */
+  border-radius: 8px;          /* 모서리를 살짝 둥글게 하면 더 예쁩니다 */
+  
+  /* 4. 기타 설정 */
+  margin: 0;
+  color: white;
+  white-space: nowrap;         /* 글자가 줄바꿈되지 않도록 설정 */
+  pointer-events: none;
+  z-index: 10;
 }
 
 @keyframes slideUpChoices {
@@ -107,24 +127,9 @@
   }
 }
 
-
-.result-image{
-  background-image: url("/public/img_3.png");
-  background-size: cover;
-  background-position: center;
-
-  height: 40cqh;
-  max-height: calc(100cqw * 1 / 1);
-  aspect-ratio: 1 / 1;
-}
-
-.nextButton{
-
-  height: 20cqw;
-  aspect-ratio: 3 / 1;
-
-  font-size: 10cqw;
-}
+/* =================== */
+/* 이하 내용 Result Box */
+/* =================== */
 
 .result-overlay {
   position: fixed;
@@ -137,6 +142,16 @@
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.result-image{
+  background-image: url("/public/img_3.png");
+  background-size: cover;
+  background-position: center;
+
+  height: 40cqh;
+  max-height: calc(100cqw * 1 / 1);
+  aspect-ratio: 1 / 1;
 }
 
 .result-box {
@@ -164,15 +179,16 @@
 .result-answer{
   
   display: flex;
-  justify-content: left;
+  justify-content: center;
   align-items: center;
-
+  padding-left: 1cqw;
+  padding-right: 1cqw;
   gap: 5%;
 }
 
 .result-font{
 
-  font-size: 10cqw;
+  font-size: 9.25cqw;
   font-weight: bold;
   color: black;
   white-space: nowrap;
@@ -187,7 +203,6 @@
   gap: 3cqh;
 }
 
-
 .result-title{
 
   font-size: 12cqw;
@@ -197,4 +212,12 @@
   
   display: flex;
   align-content: center;
+}
+
+.nextButton{
+
+  height: 20cqw;
+  aspect-ratio: 3 / 1;
+
+  font-size: 10cqw;
 }

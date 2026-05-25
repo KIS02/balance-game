@@ -1,27 +1,39 @@
 import { useGoogleLogin } from '@react-oauth/google';
 import { useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
+import { API_BASE_URL } from '../constants/api';
 
-function LoginButton() {
-  const [user, setUser] = useState(null);
+function LoginButton({ user, onLogin }) {
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const login = useGoogleLogin({
     flow: 'implicit', // 중요 (access_token 방식)
     onSuccess: async (tokenResponse) => {
-      // access_token으로 사용자 정보 가져오기
-      const res = await fetch(
-        'https://www.googleapis.com/oauth2/v3/userinfo',
-        {
+      try {
+        setIsLoggingIn(true);
+
+        const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
+          method: 'POST',
           headers: {
-            Authorization: `Bearer ${tokenResponse.access_token}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({ accessToken: tokenResponse.access_token }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Login Failed');
         }
-      );
 
-      const userInfo = await res.json();
-      console.log(userInfo);
-
-      setUser(userInfo);
+        onLogin({
+          user: data.result,
+          accessToken: tokenResponse.access_token,
+        });
+      } catch (error) {
+        console.log(error.message || 'Login Failed');
+      } finally {
+        setIsLoggingIn(false);
+      }
     },
     onError: () => {
       console.log('Login Failed');
@@ -31,6 +43,8 @@ function LoginButton() {
   return (
     <button
       onClick={() => login()}
+      disabled={isLoggingIn}
+      title={user?.name || 'Google 로그인'}
       style={{
         position: 'fixed',
         zIndex: 9999,

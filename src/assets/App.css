@@ -32,6 +32,7 @@
 
 /* 공통 카드 */
 .card {
+  position: relative;
   flex: 1;
 
   display: flex;
@@ -48,6 +49,8 @@
 
   transform: translateY(40vh);
   opacity: 0;
+  overflow: hidden;
+  border-radius: 8px;
 }
 
 /* 이미지가 1x1사이즈로 깨지지 않을 때, 까지는
@@ -93,6 +96,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover; /* background-size: cover와 동일한 역할 */
+  display: block;
 }
 
 .overlay-text {
@@ -162,6 +166,7 @@
   height: 40cqh;
   max-height: calc(100cqw * 1 / 1);
   aspect-ratio: 1 / 1;
+  object-fit: cover;
 }
 
 .result-box {

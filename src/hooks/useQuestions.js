@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-
-const API_BASE_URL = "http://localhost:3001";
+import { API_BASE_URL } from "../constants/api";
 
 const createPlaceholderImage = (label, color) => {
   const svg = `
@@ -23,8 +22,12 @@ const mapQuestionFromApi = (question) => {
     bOptionId: secondOption?.id,
     aText: firstOption?.text ?? "",
     bText: secondOption?.text ?? "",
-    aImg: createPlaceholderImage(firstOption?.text ?? "A", "#4f46e5"),
-    bImg: createPlaceholderImage(secondOption?.text ?? "B", "#ec4899"),
+    aImg:
+      firstOption?.imageUrl ||
+      createPlaceholderImage(firstOption?.text ?? "A", "#4f46e5"),
+    bImg:
+      secondOption?.imageUrl ||
+      createPlaceholderImage(secondOption?.text ?? "B", "#ec4899"),
     aCount: firstOption?.voteCount ?? 0,
     bCount: secondOption?.voteCount ?? 0,
   };
@@ -80,7 +83,12 @@ export function useQuestions() {
     setCurrentIndex((prev) => (prev + 1) % questions.length);
   };
 
-  const updateVote = async (questionId, optionId) => {
+  const updateVote = async (questionId, optionId, accessToken) => {
+    if (!accessToken) {
+      setError("로그인 후 투표할 수 있습니다.");
+      return null;
+    }
+
     try {
       setVoting(true);
       setError("");
@@ -88,25 +96,34 @@ export function useQuestions() {
       const response = await fetch(`${API_BASE_URL}/api/questions/${questionId}/vote`, {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ optionId }),
       });
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error("투표에 실패했습니다.");
+      if (data.result) {
+        const updatedQuestion = mapQuestionFromApi(data.result);
+
+        setQuestions((prevQuestions) =>
+          prevQuestions.map((question) =>
+            question.id === updatedQuestion.id ? updatedQuestion : question
+          )
+        );
+
+        return {
+          question: updatedQuestion,
+          message: data.message || "",
+          success: data.success,
+        };
       }
 
-      const updatedQuestion = mapQuestionFromApi(data.result);
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "투표에 실패했습니다.");
+      }
 
-      setQuestions((prevQuestions) =>
-        prevQuestions.map((question) =>
-          question.id === updatedQuestion.id ? updatedQuestion : question
-        )
-      );
-
-      return updatedQuestion;
+      return null;
     } catch (err) {
       setError(err.message || "API 요청 중 오류가 발생했습니다.");
       return null;

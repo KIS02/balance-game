@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql2/promise");
 const path = require("path");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./swagger");
 
 require("dotenv").config({ path: path.join(__dirname, ".env") });
 
@@ -13,6 +15,7 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,

@@ -10,8 +10,8 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:3001",
-        description: "Local backend server",
+        url: process.env.SERVER_URL || "http://localhost:3001",
+        description: "Balance Game backend server",
       },
     ],
     components: {

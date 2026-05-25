@@ -16,6 +16,8 @@ function App() {
   const {
     currentQuestion,
     loading,
+    voting,
+    error,
     nextQuestion,
     updateVote,
   } = useQuestions();
@@ -36,8 +38,13 @@ function App() {
     ? ((currentQuestion.bCount / total) * 100).toFixed(1)
     : 0;
 
-  const handleChoice = (type) => {
-    if (!currentQuestion) return;
+  const handleChoice = async (type) => {
+    if (!currentQuestion || showResult || voting) return;
+
+    const selectedOptionId =
+      type === "A" ? currentQuestion.aOptionId : currentQuestion.bOptionId;
+
+    if (!selectedOptionId) return;
 
     if (type === "A") {
       setResultImg(currentQuestion.aImg);
@@ -45,8 +52,11 @@ function App() {
       setResultImg(currentQuestion.bImg);
     }
 
-    updateVote(currentQuestion.id, type);
-    setShowResult(true);
+    const updatedQuestion = await updateVote(currentQuestion.id, selectedOptionId);
+
+    if (updatedQuestion) {
+      setShowResult(true);
+    }
   };
 
   const handleNextQuestion = () => {
@@ -56,8 +66,6 @@ function App() {
   };
 
   useEffect(() => {
-    setAnimate(false);
-
     const timer = setTimeout(() => {
       setAnimate(true);
     }, 50);
@@ -67,6 +75,10 @@ function App() {
 
   if (loading) {
     return <div>문제를 불러오는 중...</div>;
+  }
+
+  if (error && !currentQuestion) {
+    return <div>{error}</div>;
   }
 
   if (!currentQuestion) {
@@ -91,6 +103,8 @@ function App() {
       </GoogleOAuthProvider>
 
       <h1 className="title">{currentQuestion.title}</h1>
+      {error && <div className="api-error">{error}</div>}
+      {voting && <div className="api-status">투표 처리 중...</div>}
 
       {/* 선택 카드 */}
       <div className="choices">

@@ -9,6 +9,16 @@
   font-weight: bold;
 }
 
+.api-error,
+.api-status {
+  text-align: center;
+  font-weight: bold;
+}
+
+.api-error {
+  color: #dc2626;
+}
+
 .choices {
   display: flex;
   justify-content: space-between;

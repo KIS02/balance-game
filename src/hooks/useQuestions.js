@@ -1,75 +1,118 @@
 import { useEffect, useState } from "react";
 
-const mockQuestions = [
-  {
-    id: 1,
-    title: "네이버 vs 카카오",
-    aText: "네이버",
-    bText: "카카오",
-    aImg: "https://res-console.cloudinary.com/dnbwcl1cf/thumbnails/transform/v1/image/upload/Y19maWxsLGhfMjAwLHdfMjAw/v1/aW1nX3AxX2FfbGRyN2c3/template_primary",
-    bImg: "https://res-console.cloudinary.com/dnbwcl1cf/thumbnails/transform/v1/image/upload/Y19maWxsLGhfMjAwLHdfMjAw/v1/aW1nX3AxX2JfazBtN3Vm/template_primary",
-    aCount: 10,
-    bCount: 5,
-  },
-  {
-    id: 2,
-    title: "구글 vs 마이크로소프트",
-    aText: "구글",
-    bText: "마이크로소프트",
-    aImg: "https://res-console.cloudinary.com/dnbwcl1cf/thumbnails/transform/v1/image/upload/Y19maWxsLGhfMjAwLHdfMjAw/v1/aW1nX3AyX2Ffa29kdjZq/template_primary",
-    bImg: "https://res-console.cloudinary.com/dnbwcl1cf/thumbnails/transform/v1/image/upload/Y19maWxsLGhfMjAwLHdfMjAw/v1/aW1nX3AyX2JfeWUwd2x4/template_primary",
-    aCount: 20,
-    bCount: 30,
-  },
-  {
-    id: 3,
-    title: "강아지 vs 고양이",
-    aText: "강아지",
-    bText: "고양이",
-    aImg: "/Img_5.png",
-    bImg: "/Img_6.png",
-    aCount: 15,
-    bCount: 25,
-  },
-];
+const API_BASE_URL = "http://localhost:3001";
+
+const createPlaceholderImage = (label, color) => {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+      <rect width="600" height="600" fill="${color}" />
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="64" font-weight="700">${label}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
+
+const mapQuestionFromApi = (question) => {
+  const [firstOption, secondOption] = question.options ?? [];
+
+  return {
+    id: question.id,
+    title: question.title,
+    aOptionId: firstOption?.id,
+    bOptionId: secondOption?.id,
+    aText: firstOption?.text ?? "",
+    bText: secondOption?.text ?? "",
+    aImg: createPlaceholderImage(firstOption?.text ?? "A", "#4f46e5"),
+    bImg: createPlaceholderImage(secondOption?.text ?? "B", "#ec4899"),
+    aCount: firstOption?.voteCount ?? 0,
+    bCount: secondOption?.voteCount ?? 0,
+  };
+};
 
 export function useQuestions() {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [voting, setVoting] = useState(false);
+  const [error, setError] = useState("");
 
   const currentQuestion = questions[currentIndex];
 
   useEffect(() => {
-    // 나중에는 여기서 서버 fetch로 바꾸면 됨
-    setQuestions(mockQuestions);
-    setLoading(false);
+    const controller = new AbortController();
+
+    const fetchQuestions = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await fetch(`${API_BASE_URL}/api/questions`, {
+          signal: controller.signal,
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error("질문 목록을 불러오지 못했습니다.");
+        }
+
+        setQuestions(data.result.map(mapQuestionFromApi));
+        setCurrentIndex(0);
+      } catch (err) {
+        if (err.name === "AbortError") return;
+
+        setError(err.message || "API 요청 중 오류가 발생했습니다.");
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchQuestions();
+
+    return () => controller.abort();
   }, []);
 
-    const nextQuestion = () => {
+  const nextQuestion = () => {
     if (questions.length === 0) return;
 
     setCurrentIndex((prev) => (prev + 1) % questions.length);
-    };
+  };
 
-  const updateVote = (questionId, type) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((question) => {
-        if (question.id !== questionId) return question;
+  const updateVote = async (questionId, optionId) => {
+    try {
+      setVoting(true);
+      setError("");
 
-        if (type === "A") {
-          return {
-            ...question,
-            aCount: question.aCount + 1,
-          };
-        }
+      const response = await fetch(`${API_BASE_URL}/api/questions/${questionId}/vote`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ optionId }),
+      });
+      const data = await response.json();
 
-        return {
-          ...question,
-          bCount: question.bCount + 1,
-        };
-      })
-    );
+      if (!response.ok || !data.success) {
+        throw new Error("투표에 실패했습니다.");
+      }
+
+      const updatedQuestion = mapQuestionFromApi(data.result);
+
+      setQuestions((prevQuestions) =>
+        prevQuestions.map((question) =>
+          question.id === updatedQuestion.id ? updatedQuestion : question
+        )
+      );
+
+      return updatedQuestion;
+    } catch (err) {
+      setError(err.message || "API 요청 중 오류가 발생했습니다.");
+      return null;
+    } finally {
+      setVoting(false);
+    }
   };
 
   return {
@@ -77,6 +120,8 @@ export function useQuestions() {
     currentQuestion,
     currentIndex,
     loading,
+    voting,
+    error,
     nextQuestion,
     updateVote,
   };

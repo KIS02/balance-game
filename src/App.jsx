@@ -7,6 +7,13 @@ import { getResultTextFontSizes } from "./utils/getResultTextFontSizes";
 import { getChoiceTextFontSizes } from "./utils/getChoiceTextFontSizes";
 
 
+const IMAGE_FALLBACK_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+    <rect width="600" height="600" fill="#6b7280" />
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="48" font-weight="700">이미지 없음</text>
+  </svg>
+`)}`;
+
 
 function App() {
   const [clientID] = useState(
@@ -16,6 +23,8 @@ function App() {
   const {
     currentQuestion,
     loading,
+    voting,
+    error,
     nextQuestion,
     updateVote,
   } = useQuestions();
@@ -23,6 +32,9 @@ function App() {
   const [animate, setAnimate] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [resultImg, setResultImg] = useState(null);
+  const [loginUser, setLoginUser] = useState(null);
+  const [accessToken, setAccessToken] = useState("");
+  const [voteMessage, setVoteMessage] = useState("");
 
   const total = currentQuestion
     ? currentQuestion.aCount + currentQuestion.bCount
@@ -36,8 +48,18 @@ function App() {
     ? ((currentQuestion.bCount / total) * 100).toFixed(1)
     : 0;
 
-  const handleChoice = (type) => {
-    if (!currentQuestion) return;
+  const handleChoice = async (type) => {
+    if (!currentQuestion || showResult || voting) return;
+
+    if (!accessToken) {
+      setVoteMessage("로그인 후 투표할 수 있습니다.");
+      return;
+    }
+
+    const selectedOptionId =
+      type === "A" ? currentQuestion.aOptionId : currentQuestion.bOptionId;
+
+    if (!selectedOptionId) return;
 
     if (type === "A") {
       setResultImg(currentQuestion.aImg);
@@ -45,19 +67,38 @@ function App() {
       setResultImg(currentQuestion.bImg);
     }
 
-    updateVote(currentQuestion.id, type);
-    setShowResult(true);
+    setVoteMessage("");
+    const voteResult = await updateVote(
+      currentQuestion.id,
+      selectedOptionId,
+      accessToken
+    );
+
+    if (voteResult?.question) {
+      setVoteMessage(voteResult.message);
+      setShowResult(true);
+    }
   };
 
   const handleNextQuestion = () => {
     setShowResult(false);
     setAnimate(false);
+    setVoteMessage("");
     nextQuestion();
   };
 
-  useEffect(() => {
-    setAnimate(false);
+  const handleLogin = ({ user, accessToken: googleAccessToken }) => {
+    setLoginUser(user);
+    setAccessToken(googleAccessToken);
+    setVoteMessage("");
+  };
 
+  const handleImageError = (event) => {
+    event.currentTarget.onerror = null;
+    event.currentTarget.src = IMAGE_FALLBACK_SRC;
+  };
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setAnimate(true);
     }, 50);
@@ -67,6 +108,10 @@ function App() {
 
   if (loading) {
     return <div>문제를 불러오는 중...</div>;
+  }
+
+  if (error && !currentQuestion) {
+    return <div>{error}</div>;
   }
 
   if (!currentQuestion) {
@@ -86,11 +131,14 @@ function App() {
       {/* 구글 로그인 기능 구현 관련 */}
       <GoogleOAuthProvider clientId={clientID}>
         <div style={{ display: "flex", justifyContent: "flex-end", padding: 20 }}>
-          <LoginButton />
+          <LoginButton user={loginUser} onLogin={handleLogin} />
         </div>
       </GoogleOAuthProvider>
 
       <h1 className="title">{currentQuestion.title}</h1>
+      {error && <div className="api-error">{error}</div>}
+      {voteMessage && <div className="api-status">{voteMessage}</div>}
+      {voting && <div className="api-status">투표 처리 중...</div>}
 
       {/* 선택 카드 */}
       <div className="choices">
@@ -98,7 +146,7 @@ function App() {
           className={`card left ${animate ? "show" : ""}`}
           onClick={() => handleChoice("A")}
         >
-          <img src={currentQuestion.aImg} />
+          <img src={currentQuestion.aImg} onError={handleImageError} />
           <h1 
             className="overlay-text"
             style={{ fontSize: aChoiceFontSize }}>
@@ -110,7 +158,7 @@ function App() {
           className={`card right ${animate ? "show" : ""}`}
           onClick={() => handleChoice("B")}
         >
-          <img src={currentQuestion.bImg} />
+          <img src={currentQuestion.bImg} onError={handleImageError} />
             <h1 className="overlay-text"
             style={{ fontSize: bChoiceFontSize }}>
             {currentQuestion.bText}
@@ -124,7 +172,7 @@ function App() {
           <div className="result-box">
             <div className="result-title">결과</div>
 
-            <img className="result-image" src={resultImg} />
+            <img className="result-image" src={resultImg} onError={handleImageError} />
 
             <div className="result-answer">
               <div className="result-font">

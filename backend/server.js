@@ -324,6 +324,14 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.json({
+    message: "Balance Game Backend API is running",
+    swagger: "/api-docs",
+    questions: "/api/questions",
+  });
+});
+
 const port = process.env.PORT || 3001;
 
 app.listen(port, () => {

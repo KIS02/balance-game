@@ -1,0 +1,152 @@
+.comment-lane {
+  display: flex;
+  flex-direction: column;
+  gap: 1cqh;
+
+  overflow: hidden;
+  pointer-events: none;
+
+  z-index: 20;
+}
+
+.comment-lane-left {
+  align-items: flex-end;
+}
+
+.comment-lane-right {
+  align-items: flex-start;
+}
+
+.floating-comment-box {
+  width: min(100%, 280px);
+
+  aspect-ratio: 4 / 1;
+
+  display: flex;
+  align-items: center;
+  gap: 0.8cqw;
+
+  padding: 0.8cqw;
+  box-sizing: border-box;
+
+  border-radius: 1.5cqw;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0.7cqw 2cqw rgba(0, 0, 0, 0.22);
+
+  animation: commentAppear 0.25s ease-out forwards;
+}
+
+.floating-comment-img {
+  width: 5.25vw;
+  max-width:50px;
+  min-width:30px;
+  aspect-ratio: 1 / 1;
+
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+
+
+}
+
+.floating-comment-content {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+    align-items: flex-start;
+}
+
+.floating-comment-id {
+  font-size: 1.1cqw;
+  font-weight: bold;
+  color: black;
+
+  width: 100%;
+  text-align: left;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floating-comment-text {
+  font-size: 1cqw;
+  color: #333;
+
+  width: 100%;
+  text-align: left;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@keyframes commentAppear {
+  from {
+    opacity: 0;
+    transform: translateY(1cqh) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+
+
+
+
+.floating-comment-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  pointer-events: auto;
+}
+
+.floating-comment-box {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.floating-comment-delete-button {
+  margin-top: 0.4rem;
+
+  width: 36px;
+  height: 36px;
+
+  border: none;
+  border-radius: 50%;
+
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  pointer-events: auto;
+
+  animation: deleteButtonDrop 0.18s ease-out;
+}
+
+@keyframes deleteButtonDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

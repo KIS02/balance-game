@@ -1,13 +1,20 @@
 // src/utils/getResultTextFontSizes.js
+const HALF_WIDTH_CHARS = [" ", ".", ",", "'", '"', "’", "‘", "“", "”", ":", ";", "!", "?", "|", "i", "l"];
+
+const getTextLength = (text) => {
+  return Array.from(text).reduce((sum, char) => {
+    return sum + (HALF_WIDTH_CHARS.includes(char) ? 0.33 : 1);
+  }, 0);
+};
 
 export const getResultTextFontSizes = (
   aText,
   bText,
   baseSize = 9.25,
-  baseTotalLength = 8
+  baseTotalLength = 9
 ) => {
-  const aLength = aText.length;
-  const bLength = bText.length;
+  const aLength = getTextLength(aText);
+  const bLength = getTextLength(bText);
   const totalLength = aLength + bLength;
 
   let aSize = baseSize;

@@ -50,7 +50,7 @@
   transform: translateY(40vh);
   opacity: 0;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: 5.5cqw;
 }
 
 /* 이미지가 1x1사이즈로 깨지지 않을 때, 까지는
@@ -149,13 +149,20 @@
   position: fixed;
   top: 0;
   left: 0;
+
   width: 50%;
   height: 100vh;
   padding-left: 25%;
   padding-right: 25%;
+
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
+
+  gap: 1cqh;
+
+  overflow: hidden;
 }
 
 .result-image{
@@ -167,14 +174,19 @@
   max-height: calc(100cqw * 1 / 1);
   aspect-ratio: 1 / 1;
   object-fit: cover;
+  border-radius: 5.5cqw;
 }
 
 .result-box {
   background-color: white;
-
+  opacity: 80%;
   width: 100%;
   max-width: calc(66vh * 3 / 4);
   aspect-ratio: 3 / 4;
+  border-radius: 3cqw;
+  
+  position: relative;
+  z-index: 10;
 
   gap: 2cqh;
 
@@ -185,6 +197,7 @@
 
   padding: 5%;
   container-type: inline-size;
+
 
 
   flex-direction: column;
@@ -233,6 +246,6 @@
 
   height: 20cqw;
   aspect-ratio: 3 / 1;
-
+  border-radius: 5.5cqw;
   font-size: 10cqw;
 }

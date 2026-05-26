@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import "./assets/App.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import LoginButton from "./components/LoginButton";
 import { useQuestions } from "./hooks/useQuestions";
 import { getResultTextFontSizes } from "./utils/getResultTextFontSizes";
 import { getChoiceTextFontSizes } from "./utils/getChoiceTextFontSizes";
+import "./services/commentService";
+import FloatingComments from "./components/FloatingComments";
+import ResultCommentBox from "./components/ResultCommentBox";
 
 
 const IMAGE_FALLBACK_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
@@ -35,6 +38,26 @@ function App() {
   const [loginUser, setLoginUser] = useState(null);
   const [accessToken, setAccessToken] = useState("");
   const [voteMessage, setVoteMessage] = useState("");
+  const [hasMyComment, setHasMyComment] = useState(false); // 내가 댓글을 달았는지
+
+  const floatingCommentsRef = useRef(null);
+
+  const handleSubmitComment = (inputComment) => {
+    if (hasMyComment) return;
+
+    const newComment = {
+      uniqueId: Date.now(),
+      userId: loginUser?.id ?? loginUser?.sub ?? loginUser?.googleSub ?? null,
+      name: loginUser?.name || "익명",
+      picture: loginUser?.picture || IMAGE_FALLBACK_SRC,
+      content: inputComment,
+    };
+
+    floatingCommentsRef.current?.addFloatingComment(newComment);
+
+    setHasMyComment(true);
+  };
+
 
   const total = currentQuestion
     ? currentQuestion.aCount + currentQuestion.bCount
@@ -47,6 +70,38 @@ function App() {
   const bPercent = total
     ? ((currentQuestion.bCount / total) * 100).toFixed(1)
     : 0;
+
+  const { aFontSize, bFontSize } = currentQuestion
+    ? getResultTextFontSizes(currentQuestion.aText, currentQuestion.bText)
+    : { aFontSize: "10cqw", bFontSize: "10cqw" };
+
+  const { aChoiceFontSize, bChoiceFontSize } = currentQuestion
+    ? getChoiceTextFontSizes(currentQuestion.aText, currentQuestion.bText)
+    : { aFontSize: "4cqw", bFontSize: "4cqw" };
+
+  const cardOrder = useMemo(() => {
+    return Math.random() < 0.5 ? ["A", "B"] : ["B", "A"];
+  }, [currentQuestion?.id]);
+
+  const getCardData = (type) => {
+    if (!currentQuestion) return null;
+
+    if (type === "A") {
+      return {
+        type: "A",
+        img: currentQuestion.aImg,
+        text: currentQuestion.aText,
+        fontSize: aChoiceFontSize,
+      };
+    }
+
+    return {
+      type: "B",
+      img: currentQuestion.bImg,
+      text: currentQuestion.bText,
+      fontSize: bChoiceFontSize,
+    };
+  };
 
   const handleChoice = async (type) => {
     if (!currentQuestion || showResult || voting) return;
@@ -61,11 +116,7 @@ function App() {
 
     if (!selectedOptionId) return;
 
-    if (type === "A") {
-      setResultImg(currentQuestion.aImg);
-    } else {
-      setResultImg(currentQuestion.bImg);
-    }
+
 
     setVoteMessage("");
     const voteResult = await updateVote(
@@ -73,6 +124,12 @@ function App() {
       selectedOptionId,
       accessToken
     );
+
+    if ( aPercent > bPercent ) {
+      setResultImg(currentQuestion.aImg);
+    } else {
+      setResultImg(currentQuestion.bImg);
+    }
 
     if (voteResult?.question) {
       setVoteMessage(voteResult.message);
@@ -102,7 +159,6 @@ function App() {
     const timer = setTimeout(() => {
       setAnimate(true);
     }, 50);
-
     return () => clearTimeout(timer);
   }, [currentQuestion?.id]);
 
@@ -118,13 +174,8 @@ function App() {
     return <div>더 이상 문제가 없습니다.</div>;
   }
 
-  const { aFontSize, bFontSize } = currentQuestion
-    ? getResultTextFontSizes(currentQuestion.aText, currentQuestion.bText)
-    : { aFontSize: "10cqw", bFontSize: "10cqw" };
 
-  const { aChoiceFontSize, bChoiceFontSize } = currentQuestion
-    ? getChoiceTextFontSizes(currentQuestion.aText, currentQuestion.bText)
-    : { aFontSize: "4cqw", bFontSize: "4cqw" };
+    
 
   return (
     <div className="container">
@@ -141,43 +192,57 @@ function App() {
       {voting && <div className="api-status">투표 처리 중...</div>}
 
       {/* 선택 카드 */}
-      <div className="choices">
-        <div
-          className={`card left ${animate ? "show" : ""}`}
-          onClick={() => handleChoice("A")}
-        >
-          <img src={currentQuestion.aImg} onError={handleImageError} />
-          <h1 
-            className="overlay-text"
-            style={{ fontSize: aChoiceFontSize }}>
-              {currentQuestion.aText}
-          </h1>
-        </div>
+        <div className="choices">
+          {cardOrder.map((type, index) => {
+            const card = getCardData(type);
+            if (!card) return null;
 
-        <div
-          className={`card right ${animate ? "show" : ""}`}
-          onClick={() => handleChoice("B")}
-        >
-          <img src={currentQuestion.bImg} onError={handleImageError} />
-            <h1 className="overlay-text"
-            style={{ fontSize: bChoiceFontSize }}>
-            {currentQuestion.bText}
-          </h1>
+            const sideClass = index === 0 ? "left" : "right";
+
+            return (
+              <div
+                key={card.type}
+                className={`card ${sideClass} ${animate ? "show" : ""}`}
+                onClick={() => handleChoice(card.type)}
+              >
+                <img src={card.img} onError={handleImageError} />
+
+                <h1
+                  className="overlay-text"
+                  style={{ fontSize: card.fontSize }}
+                >
+                  {card.text}
+                </h1>
+              </div>
+            );
+          })}
         </div>
-      </div>
 
       {/* 결과창 */}
       {showResult && (
         <div className="result-overlay">
+          {/* 댓글 */}
+          <FloatingComments
+            ref={floatingCommentsRef}
+            show={showResult}
+            questionId={currentQuestion.id}
+            currentUserId={loginUser?.id ?? loginUser?.sub ?? loginUser?.googleSub ?? null}
+            onMyCommentStateChange={setHasMyComment}
+            onImageError={handleImageError}
+          />
+
           <div className="result-box">
             <div className="result-title">결과</div>
 
-            <img className="result-image" src={resultImg} onError={handleImageError} />
+            <img
+              className="result-image"
+              src={resultImg}
+              onError={handleImageError}
+            />
 
             <div className="result-answer">
               <div className="result-font">
-                <p style={{fontSize: aFontSize }}>
-                  {currentQuestion.aText}</p>
+                <p style={{ fontSize: aFontSize }}>{currentQuestion.aText}</p>
                 <p>{aPercent}%</p>
               </div>
 
@@ -186,8 +251,7 @@ function App() {
               </div>
 
               <div className="result-font">
-                <p style={{fontSize: bFontSize }}>
-                  {currentQuestion.bText}</p>
+                <p style={{ fontSize: bFontSize }}>{currentQuestion.bText}</p>
                 <p>{bPercent}%</p>
               </div>
             </div>
@@ -196,6 +260,11 @@ function App() {
               다음 문제
             </button>
           </div>
+          
+          <ResultCommentBox
+            onSubmitComment={handleSubmitComment}
+            disabled={hasMyComment}
+          />
         </div>
       )}
     </div>

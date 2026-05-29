@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./assets/App.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import LoginButton from "./components/LoginButton";
 import { useQuestions } from "./hooks/useQuestions";
 import { getResultTextFontSizes } from "./utils/getResultTextFontSizes";
 import { getChoiceTextFontSizes } from "./utils/getChoiceTextFontSizes";
-import "./services/commentService";
 import FloatingComments from "./components/FloatingComments";
 import ResultCommentBox from "./components/ResultCommentBox";
+import { postComment } from "./services/commentService";
 
 
 const IMAGE_FALLBACK_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
@@ -42,20 +42,34 @@ function App() {
 
   const floatingCommentsRef = useRef(null);
 
-  const handleSubmitComment = (inputComment) => {
-    if (hasMyComment) return;
+  const handleSubmitComment = async (inputComment) => {
+    if (hasMyComment || !accessToken || !currentQuestion) return;
 
-    const newComment = {
-      uniqueId: Date.now(),
-      userId: loginUser?.id ?? loginUser?.sub ?? loginUser?.googleSub ?? null,
-      name: loginUser?.name || "익명",
-      picture: loginUser?.picture || IMAGE_FALLBACK_SRC,
-      content: inputComment,
-    };
+    try {
+      const createdComment = await postComment(
+        currentQuestion.id,
+        inputComment,
+        accessToken
+      );
 
-    floatingCommentsRef.current?.addFloatingComment(newComment);
+      floatingCommentsRef.current?.addFloatingComment({
+        id: createdComment.id,
+        userId: createdComment.userId ?? loginUser?.id ?? null,
+        name: createdComment.name || loginUser?.name || "익명",
+        picture: createdComment.picture || loginUser?.picture || IMAGE_FALLBACK_SRC,
+        content: createdComment.content,
+      });
 
-    setHasMyComment(true);
+      setHasMyComment(true);
+    } catch (error) {
+      if (error.status === 409) {
+        setHasMyComment(true);
+        setVoteMessage(error.message || "이미 댓글을 작성한 질문입니다.");
+        return;
+      }
+
+      setVoteMessage(error.message || "댓글 작성에 실패했습니다.");
+    }
   };
 
 
@@ -79,9 +93,7 @@ function App() {
     ? getChoiceTextFontSizes(currentQuestion.aText, currentQuestion.bText)
     : { aFontSize: "4cqw", bFontSize: "4cqw" };
 
-  const cardOrder = useMemo(() => {
-    return Math.random() < 0.5 ? ["A", "B"] : ["B", "A"];
-  }, [currentQuestion?.id]);
+  const cardOrder = ["A", "B"];
 
   const getCardData = (type) => {
     if (!currentQuestion) return null;
@@ -116,24 +128,41 @@ function App() {
 
     if (!selectedOptionId) return;
 
-
+    const selectedImage =
+      type === "A" ? currentQuestion.aImg : currentQuestion.bImg;
 
     setVoteMessage("");
-    const voteResult = await updateVote(
-      currentQuestion.id,
-      selectedOptionId,
-      accessToken
-    );
 
-    if ( aPercent > bPercent ) {
-      setResultImg(currentQuestion.aImg);
-    } else {
-      setResultImg(currentQuestion.bImg);
-    }
+    try {
+      const voteResult = await updateVote(
+        currentQuestion.id,
+        selectedOptionId,
+        accessToken
+      );
 
-    if (voteResult?.question) {
-      setVoteMessage(voteResult.message);
-      setShowResult(true);
+      if (voteResult?.question) {
+        const resultImage =
+          type === "A" ? voteResult.question.aImg : voteResult.question.bImg;
+
+        setResultImg(resultImage || selectedImage);
+        setVoteMessage(
+          voteResult.isDuplicate
+            ? voteResult.message || "이미 투표한 질문입니다."
+            : voteResult.message || ""
+        );
+        setShowResult(true);
+        return;
+      }
+
+      setShowResult(false);
+      setResultImg(null);
+      setVoteMessage(
+        voteResult?.message || "투표 결과를 표시할 수 없습니다."
+      );
+    } catch (err) {
+      setShowResult(false);
+      setResultImg(null);
+      setVoteMessage(err.message || "투표 처리 중 오류가 발생했습니다.");
     }
   };
 
@@ -141,6 +170,7 @@ function App() {
     setShowResult(false);
     setAnimate(false);
     setVoteMessage("");
+    setHasMyComment(false);
     nextQuestion();
   };
 
@@ -226,7 +256,8 @@ function App() {
             ref={floatingCommentsRef}
             show={showResult}
             questionId={currentQuestion.id}
-            currentUserId={loginUser?.id ?? loginUser?.sub ?? loginUser?.googleSub ?? null}
+            accessToken={accessToken}
+            currentUserId={loginUser?.id ?? null}
             onMyCommentStateChange={setHasMyComment}
             onImageError={handleImageError}
           />

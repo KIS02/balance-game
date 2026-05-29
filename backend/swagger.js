@@ -134,6 +134,66 @@ const options = {
             message: { type: "string", example: "로그인이 필요합니다." },
           },
         },
+        Comment: {
+          type: "object",
+          properties: {
+            id: { type: "number", example: 1 },
+            userId: { type: "number", example: 2 },
+            name: { type: "string", example: "홍길동" },
+            picture: { type: "string", nullable: true, example: "https://example.com/profile.jpg" },
+            content: {
+              type: "string",
+              maxLength: 50,
+              example: "나는 이거 고름",
+            },
+            createdAt: { type: "string", format: "date-time" },
+            isMine: { type: "boolean", example: false },
+          },
+        },
+        CommentsResponse: {
+          type: "object",
+          properties: {
+            success: { type: "boolean", example: true },
+            result: {
+              type: "object",
+              properties: {
+                hasMyComment: { type: "boolean", example: false },
+                comments: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/Comment" },
+                },
+              },
+            },
+          },
+        },
+        CommentCreateRequest: {
+          type: "object",
+          required: ["content"],
+          properties: {
+            content: {
+              type: "string",
+              maxLength: 50,
+              example: "나는 이거 고름",
+            },
+          },
+        },
+        CommentCreateResponse: {
+          type: "object",
+          properties: {
+            success: { type: "boolean", example: true },
+            result: { $ref: "#/components/schemas/Comment" },
+          },
+        },
+        DuplicateCommentResponse: {
+          type: "object",
+          properties: {
+            success: { type: "boolean", example: false },
+            message: {
+              type: "string",
+              example: "이미 댓글을 작성한 질문입니다.",
+            },
+          },
+        },
       },
     },
     paths: {
@@ -364,6 +424,146 @@ const options = {
                       ],
                     },
                   },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/questions/{questionId}/comments": {
+        get: {
+          summary: "질문별 댓글 목록 조회",
+          description:
+            "최대 12개의 댓글만 반환하며, 로그인 사용자의 본인 댓글은 반드시 포함됩니다. Authorization은 선택입니다.",
+          tags: ["Comments"],
+          parameters: [
+            {
+              name: "questionId",
+              in: "path",
+              required: true,
+              schema: { type: "number", example: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "댓글 목록 조회 성공",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/CommentsResponse" },
+                },
+              },
+            },
+            404: {
+              description: "질문 없음",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          summary: "질문에 댓글 작성",
+          tags: ["Comments"],
+          security: [{ googleAccessToken: [] }],
+          parameters: [
+            {
+              name: "questionId",
+              in: "path",
+              required: true,
+              schema: { type: "number", example: 1 },
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CommentCreateRequest" },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "댓글 작성 성공",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/CommentCreateResponse" },
+                },
+              },
+            },
+            400: {
+              description: "댓글 내용 누락 또는 50자 초과",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                  example: {
+                    success: false,
+                    message: "댓글은 50자 이하로 작성해주세요.",
+                  },
+                },
+              },
+            },
+            401: {
+              description: "로그인 필요 또는 인증 실패",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+            409: {
+              description: "이미 댓글 작성함",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/DuplicateCommentResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/questions/{questionId}/comments/me": {
+        delete: {
+          summary: "본인 댓글 삭제",
+          tags: ["Comments"],
+          security: [{ googleAccessToken: [] }],
+          parameters: [
+            {
+              name: "questionId",
+              in: "path",
+              required: true,
+              schema: { type: "number", example: 1 },
+            },
+          ],
+          responses: {
+            200: {
+              description: "댓글 삭제 성공",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean", example: true },
+                      message: { type: "string", example: "댓글이 삭제되었습니다." },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "로그인 필요",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+            404: {
+              description: "삭제할 댓글 없음",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
                 },
               },
             },

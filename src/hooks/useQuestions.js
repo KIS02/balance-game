@@ -13,7 +13,14 @@ const createPlaceholderImage = (label, color) => {
 };
 
 const mapQuestionFromApi = (question) => {
-  const [firstOption, secondOption] = question.options ?? [];
+  if (!question || typeof question !== "object") {
+    throw new Error("유효하지 않은 질문 데이터입니다.");
+  }
+
+  const sortedOptions = [...(question.options ?? [])].sort(
+    (a, b) => a.id - b.id
+  );
+  const [firstOption, secondOption] = sortedOptions;
 
   return {
     id: question.id,
@@ -101,9 +108,16 @@ export function useQuestions() {
         },
         body: JSON.stringify({ optionId }),
       });
-      const data = await response.json();
 
-      if (data.result) {
+      let data = null;
+
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("서버 응답을 해석하지 못했습니다.");
+      }
+
+      if (data?.result && Array.isArray(data.result.options)) {
         const updatedQuestion = mapQuestionFromApi(data.result);
 
         setQuestions((prevQuestions) =>
@@ -115,18 +129,33 @@ export function useQuestions() {
         return {
           question: updatedQuestion,
           message: data.message || "",
-          success: data.success,
+          success: Boolean(data.success),
+          status: response.status,
+          isDuplicate: response.status === 409,
         };
       }
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || "투표에 실패했습니다.");
+      if (!response.ok || !data?.success) {
+        const message = data?.message || "투표에 실패했습니다.";
+        setError(message);
+        return {
+          question: null,
+          message,
+          success: false,
+          status: response.status,
+        };
       }
 
       return null;
     } catch (err) {
-      setError(err.message || "API 요청 중 오류가 발생했습니다.");
-      return null;
+      const message = err.message || "API 요청 중 오류가 발생했습니다.";
+      setError(message);
+      return {
+        question: null,
+        message,
+        success: false,
+        status: null,
+      };
     } finally {
       setVoting(false);
     }

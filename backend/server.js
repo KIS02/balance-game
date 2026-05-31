@@ -200,6 +200,28 @@ const getQuestionResult = async (db, questionId) => {
   };
 };
 
+const getUserVoteSelection = async (db, userId, questionId) => {
+  const [rows] = await db.query(
+    `
+    SELECT r.selected_option_id AS optionId
+    FROM responses r
+    WHERE r.user_id = ? AND r.question_id = ?
+    LIMIT 1
+    `,
+    [userId, questionId]
+  );
+
+  if (rows.length === 0) {
+    return { mySelectedOptionId: null };
+  }
+
+  return { mySelectedOptionId: rows[0].optionId };
+};
+
+const buildVoteSelectionPayload = (optionId) => ({
+  mySelectedOptionId: Number(optionId),
+});
+
 app.get("/api/health", async (req, res) => {
   try {
     const [rows] = await pool.query("SELECT 1 AS ok");
@@ -316,9 +338,10 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
   }
 
   const connection = await pool.getConnection();
+  let user = null;
 
   try {
-    const user = await authenticateGoogleUser(accessToken, connection);
+    user = await authenticateGoogleUser(accessToken, connection);
 
     await connection.beginTransaction();
 
@@ -354,6 +377,7 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
     res.json({
       success: true,
       result,
+      ...buildVoteSelectionPayload(optionId),
     });
   } catch (error) {
     await connection.rollback();
@@ -361,10 +385,17 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
     if (error.code === "ER_DUP_ENTRY") {
       const result = await getQuestionResult(pool, questionId);
 
+      let voteSelection = { mySelectedOptionId: null };
+
+      if (user) {
+        voteSelection = await getUserVoteSelection(pool, user.id, questionId);
+      }
+
       return res.status(409).json({
         success: false,
         message: "이미 투표한 질문입니다.",
         result,
+        ...voteSelection,
       });
     }
 

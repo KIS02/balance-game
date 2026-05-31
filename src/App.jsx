@@ -8,6 +8,12 @@ import { getChoiceTextFontSizes } from "./utils/getChoiceTextFontSizes";
 import FloatingComments from "./components/FloatingComments";
 import ResultCommentBox from "./components/ResultCommentBox";
 import { postComment } from "./services/commentService";
+import {
+  AUTH_EXPIRED_MESSAGE,
+  clearAuthSession,
+  loadAuthSession,
+  saveAuthSession,
+} from "./services/authStorage";
 
 
 const IMAGE_FALLBACK_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
@@ -17,6 +23,8 @@ const IMAGE_FALLBACK_SRC = `data:image/svg+xml;charset=UTF-8,${encodeURIComponen
   </svg>
 `)}`;
 
+
+const initialAuthSession = loadAuthSession();
 
 function App() {
   const [clientID] = useState(
@@ -35,12 +43,32 @@ function App() {
   const [animate, setAnimate] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [resultImg, setResultImg] = useState(null);
-  const [loginUser, setLoginUser] = useState(null);
-  const [accessToken, setAccessToken] = useState("");
+  const [loginUser, setLoginUser] = useState(initialAuthSession?.user ?? null);
+  const [accessToken, setAccessToken] = useState(
+    initialAuthSession?.accessToken ?? ""
+  );
   const [voteMessage, setVoteMessage] = useState("");
+  const [userVotesByQuestionId, setUserVotesByQuestionId] = useState({});
   const [hasMyComment, setHasMyComment] = useState(false); // 내가 댓글을 달았는지
 
   const floatingCommentsRef = useRef(null);
+  const previousChoiceRef = useRef(null);
+
+  const [showPreviousChoicePopover, setShowPreviousChoicePopover] = useState(false);
+
+  const handleAuthExpired = () => {
+    clearAuthSession();
+    setLoginUser(null);
+    setAccessToken("");
+    setVoteMessage(AUTH_EXPIRED_MESSAGE);
+  };
+
+  const handleLogout = () => {
+    clearAuthSession();
+    setLoginUser(null);
+    setAccessToken("");
+    setVoteMessage("");
+  };
 
   const handleSubmitComment = async (inputComment) => {
     if (hasMyComment || !accessToken || !currentQuestion) return;
@@ -62,6 +90,11 @@ function App() {
 
       setHasMyComment(true);
     } catch (error) {
+      if (error.status === 401) {
+        handleAuthExpired();
+        return;
+      }
+
       if (error.status === 409) {
         setHasMyComment(true);
         setVoteMessage(error.message || "이미 댓글을 작성한 질문입니다.");
@@ -94,6 +127,61 @@ function App() {
     : { aFontSize: "4cqw", bFontSize: "4cqw" };
 
   const cardOrder = ["A", "B"];
+
+  const saveUserVote = (questionId, optionId) => {
+    if (questionId == null || optionId == null) return;
+
+    setUserVotesByQuestionId((prev) => ({
+      ...prev,
+      [questionId]: Number(optionId),
+    }));
+  };
+
+  const getPreviousChoiceOption = () => {
+    if (!currentQuestion) return null;
+
+    const optionId = userVotesByQuestionId[currentQuestion.id];
+    if (optionId == null) return null;
+
+    if (Number(optionId) === Number(currentQuestion.aOptionId)) {
+      return {
+        text: currentQuestion.aText,
+        img: currentQuestion.aImg,
+      };
+    }
+
+    if (Number(optionId) === Number(currentQuestion.bOptionId)) {
+      return {
+        text: currentQuestion.bText,
+        img: currentQuestion.bImg,
+      };
+    }
+
+    return null;
+  };
+
+  const isHoverFinePointer = () =>
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  const handlePreviousChoiceMouseEnter = () => {
+    if (isHoverFinePointer()) {
+      setShowPreviousChoicePopover(true);
+    }
+  };
+
+  const handlePreviousChoiceMouseLeave = () => {
+    if (isHoverFinePointer()) {
+      setShowPreviousChoicePopover(false);
+    }
+  };
+
+  const handlePreviousChoiceClick = (event) => {
+    event.stopPropagation();
+
+    if (!isHoverFinePointer()) {
+      setShowPreviousChoicePopover((prev) => !prev);
+    }
+  };
 
   const getCardData = (type) => {
     if (!currentQuestion) return null;
@@ -140,10 +228,19 @@ function App() {
         accessToken
       );
 
+      if (voteResult?.status === 401) {
+        handleAuthExpired();
+        return;
+      }
+
       if (voteResult?.question) {
         const resultImage =
           type === "A" ? voteResult.question.aImg : voteResult.question.bImg;
+        const savedOptionId =
+          voteResult.mySelectedOptionId ?? selectedOptionId ?? null;
 
+        saveUserVote(currentQuestion.id, savedOptionId);
+        setShowPreviousChoicePopover(false);
         setResultImg(resultImage || selectedImage);
         setVoteMessage(
           voteResult.isDuplicate
@@ -168,6 +265,7 @@ function App() {
 
   const handleNextQuestion = () => {
     setShowResult(false);
+    setShowPreviousChoicePopover(false);
     setAnimate(false);
     setVoteMessage("");
     setHasMyComment(false);
@@ -175,6 +273,7 @@ function App() {
   };
 
   const handleLogin = ({ user, accessToken: googleAccessToken }) => {
+    saveAuthSession(user, googleAccessToken);
     setLoginUser(user);
     setAccessToken(googleAccessToken);
     setVoteMessage("");
@@ -191,6 +290,29 @@ function App() {
     }, 50);
     return () => clearTimeout(timer);
   }, [currentQuestion?.id]);
+
+  useEffect(() => {
+    if (!showPreviousChoicePopover) return;
+
+    const handlePointerDown = (event) => {
+      if (
+        previousChoiceRef.current &&
+        !previousChoiceRef.current.contains(event.target)
+      ) {
+        setShowPreviousChoicePopover(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [showPreviousChoicePopover]);
+
+  const previousChoiceOption = getPreviousChoiceOption();
 
   if (loading) {
     return <div>문제를 불러오는 중...</div>;
@@ -212,7 +334,11 @@ function App() {
       {/* 구글 로그인 기능 구현 관련 */}
       <GoogleOAuthProvider clientId={clientID}>
         <div style={{ display: "flex", justifyContent: "flex-end", padding: 20 }}>
-          <LoginButton user={loginUser} onLogin={handleLogin} />
+          <LoginButton
+            user={loginUser}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+          />
         </div>
       </GoogleOAuthProvider>
 
@@ -260,10 +386,53 @@ function App() {
             currentUserId={loginUser?.id ?? null}
             onMyCommentStateChange={setHasMyComment}
             onImageError={handleImageError}
+            onAuthExpired={handleAuthExpired}
           />
 
           <div className="result-box">
-            <div className="result-title">결과</div>
+            <div className="result-header">
+              <div className="result-title">결과</div>
+
+              {previousChoiceOption && (
+                <div
+                  ref={previousChoiceRef}
+                  className="previous-choice-trigger"
+                  onMouseEnter={handlePreviousChoiceMouseEnter}
+                  onMouseLeave={handlePreviousChoiceMouseLeave}
+                >
+                  <button
+                    type="button"
+                    className="previous-choice-button"
+                    onClick={handlePreviousChoiceClick}
+                    aria-expanded={showPreviousChoicePopover}
+                    aria-haspopup="dialog"
+                  >
+                    이전 선택
+                  </button>
+
+                  {showPreviousChoicePopover && (
+                    <div
+                      className="previous-choice-popover"
+                      role="dialog"
+                      aria-label="이전 선택 정보"
+                    >
+                      <p className="previous-choice-popover-label">
+                        이전에 선택한 항목
+                      </p>
+                      <img
+                        className="previous-choice-popover-image"
+                        src={previousChoiceOption.img}
+                        alt=""
+                        onError={handleImageError}
+                      />
+                      <p className="previous-choice-popover-text">
+                        {previousChoiceOption.text}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <img
               className="result-image"

@@ -242,6 +242,115 @@
   align-content: center;
 }
 
+.result-header {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.previous-choice-trigger {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 25;
+}
+
+.previous-choice-button {
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+
+  color: #1d4ed8;
+  font-size: clamp(10px, 2.8cqw, 13px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+
+  padding: 0.35em 0.75em;
+  cursor: pointer;
+}
+
+.previous-choice-button:hover {
+  background-color: rgba(239, 246, 255, 0.98);
+}
+
+.previous-choice-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+
+  width: min(168px, 38vw);
+  padding: 10px 12px;
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  background-color: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+
+  z-index: 30;
+}
+
+.previous-choice-popover-label {
+  margin: 0;
+
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-align: center;
+}
+
+.previous-choice-popover-image {
+  width: 100px;
+  height: 100px;
+  min-width: 90px;
+  min-height: 90px;
+  max-width: 120px;
+  max-height: 120px;
+
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.previous-choice-popover-text {
+  margin: 0;
+
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+@media (max-width: 720px) {
+  .previous-choice-button {
+    font-size: 10px;
+    padding: 0.3em 0.55em;
+  }
+
+  .previous-choice-popover {
+    width: min(156px, 52vw);
+    padding: 8px 10px;
+  }
+
+  .previous-choice-popover-image {
+    width: 90px;
+    height: 90px;
+  }
+}
+
 .nextButton{
 
   height: 20cqw;

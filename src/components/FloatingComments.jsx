@@ -45,6 +45,7 @@ const FloatingComments = forwardRef(function FloatingComments(
     currentUserId,
     onMyCommentStateChange,
     onImageError,
+    onAuthExpired,
   },
   ref
 ) {
@@ -149,6 +150,10 @@ const FloatingComments = forwardRef(function FloatingComments(
       } catch (error) {
         console.error("댓글을 불러오지 못했습니다.", error);
 
+        if (error.status === 401) {
+          onAuthExpired?.();
+        }
+
         if (!isCancelled()) {
           setComments([]);
           onMyCommentStateChange?.(false);
@@ -157,7 +162,7 @@ const FloatingComments = forwardRef(function FloatingComments(
         return null;
       }
     },
-    [questionId, accessToken, onMyCommentStateChange, applyComments]
+    [questionId, accessToken, onMyCommentStateChange, applyComments, onAuthExpired]
   );
 
   const addFloatingComment = useCallback(
@@ -197,6 +202,10 @@ const FloatingComments = forwardRef(function FloatingComments(
       await loadComments({ withAnimation: false });
     } catch (error) {
       console.error("댓글 삭제에 실패했습니다.", error);
+
+      if (error.status === 401) {
+        onAuthExpired?.();
+      }
     } finally {
       setIsDeleting(false);
     }

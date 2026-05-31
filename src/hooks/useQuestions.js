@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../constants/api";
+import {
+  clearQuestionSession,
+  loadQuestionSession,
+  restoreQuestionOrder,
+  saveQuestionSession,
+} from "../services/questionSessionStorage";
 
 const createPlaceholderImage = (label, color) => {
   const svg = `
@@ -10,6 +16,38 @@ const createPlaceholderImage = (label, color) => {
   `;
 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
+
+const shuffleQuestions = (questions) => {
+  const array = [...questions];
+
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+
+  return array;
+};
+
+const shuffleQuestionsAvoidingFirst = (questions, avoidQuestionId) => {
+  const array = shuffleQuestions(questions);
+
+  if (
+    avoidQuestionId == null ||
+    array.length <= 1 ||
+    array[0].id !== avoidQuestionId
+  ) {
+    return array;
+  }
+
+  const swapIndex = array.findIndex(
+    (question, index) => index > 0 && question.id !== avoidQuestionId
+  );
+  const targetIndex = swapIndex > 0 ? swapIndex : 1;
+
+  [array[0], array[targetIndex]] = [array[targetIndex], array[0]];
+
+  return array;
 };
 
 const mapQuestionFromApi = (question) => {
@@ -66,8 +104,22 @@ export function useQuestions() {
           throw new Error("질문 목록을 불러오지 못했습니다.");
         }
 
-        setQuestions(data.result.map(mapQuestionFromApi));
-        setCurrentIndex(0);
+        const mappedQuestions = data.result.map(mapQuestionFromApi);
+        const session = loadQuestionSession();
+        const restored = restoreQuestionOrder(mappedQuestions, session);
+
+        if (restored) {
+          setQuestions(restored.questions);
+          setCurrentIndex(restored.currentIndex);
+          saveQuestionSession(restored.questions, restored.currentIndex);
+        } else {
+          clearQuestionSession();
+          const shuffledQuestions = shuffleQuestions(mappedQuestions);
+
+          setQuestions(shuffledQuestions);
+          setCurrentIndex(0);
+          saveQuestionSession(shuffledQuestions, 0);
+        }
       } catch (err) {
         if (err.name === "AbortError") return;
 
@@ -87,7 +139,26 @@ export function useQuestions() {
   const nextQuestion = () => {
     if (questions.length === 0) return;
 
-    setCurrentIndex((prev) => (prev + 1) % questions.length);
+    if (currentIndex + 1 < questions.length) {
+      const nextIndex = currentIndex + 1;
+
+      setCurrentIndex(nextIndex);
+      saveQuestionSession(questions, nextIndex);
+      return;
+    }
+
+    const lastQuestionId = questions[currentIndex]?.id;
+
+    setQuestions((prevQuestions) => {
+      const shuffledQuestions = shuffleQuestionsAvoidingFirst(
+        prevQuestions,
+        lastQuestionId
+      );
+
+      saveQuestionSession(shuffledQuestions, 0);
+      return shuffledQuestions;
+    });
+    setCurrentIndex(0);
   };
 
   const updateVote = async (questionId, optionId, accessToken) => {
@@ -132,6 +203,7 @@ export function useQuestions() {
           success: Boolean(data.success),
           status: response.status,
           isDuplicate: response.status === 409,
+          mySelectedOptionId: data.mySelectedOptionId ?? null,
         };
       }
 

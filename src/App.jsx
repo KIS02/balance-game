@@ -28,7 +28,7 @@ const initialAuthSession = loadAuthSession();
 
 function App() {
   const [clientID] = useState(
-    "745579463736-40h2qsko1926ai7u3a8hgj646pkf7c6e.apps.googleusercontent.com"
+    "745579463736-deppejplvbuu75ge2im3nsleemesdh1e.apps.googleusercontent.com"
   );
 
   const {

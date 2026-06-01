@@ -9,8 +9,13 @@ require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const app = express();
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://balance-game-frontend.onrender.com",
+];
+
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: allowedOrigins,
   credentials: true,
 }));
 

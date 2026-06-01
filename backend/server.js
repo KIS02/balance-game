@@ -358,15 +358,29 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
 
     const [existingRows] = await connection.query(
       `
-      SELECT id
-      FROM responses
-      WHERE user_id = ? AND question_id = ?
+      SELECT
+        r.id,
+        r.selected_option_id AS selectedOptionId,
+        o.content AS selectedOptionText
+      FROM responses r
+      JOIN options o ON r.selected_option_id = o.id
+      WHERE r.user_id = ? AND r.question_id = ?
       LIMIT 1
       `,
       [user.id, questionId]
     );
 
+    let previousSelectedOptionId = null;
+    let previousSelectedOptionText = null;
+
     if (existingRows.length > 0) {
+      const existingOptionId = existingRows[0].selectedOptionId;
+
+      if (Number(existingOptionId) !== Number(optionId)) {
+        previousSelectedOptionId = existingOptionId;
+        previousSelectedOptionText = existingRows[0].selectedOptionText || null;
+      }
+
       await connection.query(
         `
         UPDATE responses
@@ -393,6 +407,8 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
       success: true,
       result,
       ...buildVoteSelectionPayload(optionId, result),
+      previousSelectedOptionId,
+      previousSelectedOptionText,
     });
   } catch (error) {
     await connection.rollback();

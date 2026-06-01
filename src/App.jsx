@@ -49,6 +49,7 @@ function App() {
   );
   const [voteMessage, setVoteMessage] = useState("");
   const [userVotesByQuestionId, setUserVotesByQuestionId] = useState({});
+  const [resultPreviousChoice, setResultPreviousChoice] = useState(null);
   const [hasMyComment, setHasMyComment] = useState(false); // 내가 댓글을 달았는지
 
   const floatingCommentsRef = useRef(null);
@@ -137,24 +138,25 @@ function App() {
     }));
   };
 
-  const getPreviousChoiceOption = () => {
-    if (!currentQuestion) return null;
+  const resolveChoiceDisplay = (question, optionId, optionText) => {
+    if (!question || optionId == null) return null;
 
-    const optionId = userVotesByQuestionId[currentQuestion.id];
-    if (optionId == null) return null;
-
-    if (Number(optionId) === Number(currentQuestion.aOptionId)) {
+    if (Number(optionId) === Number(question.aOptionId)) {
       return {
-        text: currentQuestion.aText,
-        img: currentQuestion.aImg,
+        text: question.aText,
+        img: question.aImg,
       };
     }
 
-    if (Number(optionId) === Number(currentQuestion.bOptionId)) {
+    if (Number(optionId) === Number(question.bOptionId)) {
       return {
-        text: currentQuestion.bText,
-        img: currentQuestion.bImg,
+        text: question.bText,
+        img: question.bImg,
       };
+    }
+
+    if (optionText) {
+      return { text: optionText, img: null };
     }
 
     return null;
@@ -239,6 +241,13 @@ function App() {
         const savedOptionId =
           voteResult.mySelectedOptionId ?? selectedOptionId ?? null;
 
+        const previousForResult = resolveChoiceDisplay(
+          voteResult.question,
+          voteResult.previousSelectedOptionId,
+          voteResult.previousSelectedOptionText
+        );
+
+        setResultPreviousChoice(previousForResult);
         saveUserVote(currentQuestion.id, savedOptionId);
         setShowPreviousChoicePopover(false);
         setResultImg(resultImage || selectedImage);
@@ -249,12 +258,14 @@ function App() {
 
       setShowResult(false);
       setResultImg(null);
+      setResultPreviousChoice(null);
       setVoteMessage(
         voteResult?.message || "투표 결과를 표시할 수 없습니다."
       );
     } catch (err) {
       setShowResult(false);
       setResultImg(null);
+      setResultPreviousChoice(null);
       setVoteMessage(err.message || "투표 처리 중 오류가 발생했습니다.");
     }
   };
@@ -262,6 +273,7 @@ function App() {
   const handleNextQuestion = () => {
     setShowResult(false);
     setShowPreviousChoicePopover(false);
+    setResultPreviousChoice(null);
     setAnimate(false);
     setVoteMessage("");
     setHasMyComment(false);
@@ -307,8 +319,6 @@ function App() {
       document.removeEventListener("touchstart", handlePointerDown);
     };
   }, [showPreviousChoicePopover]);
-
-  const previousChoiceOption = getPreviousChoiceOption();
 
   if (loading) {
     return <div>문제를 불러오는 중...</div>;
@@ -389,7 +399,7 @@ function App() {
             <div className="result-header">
               <div className="result-title">결과</div>
 
-              {previousChoiceOption && (
+              {resultPreviousChoice && (
                 <div
                   ref={previousChoiceRef}
                   className="previous-choice-trigger"
@@ -417,12 +427,12 @@ function App() {
                       </p>
                       <img
                         className="previous-choice-popover-image"
-                        src={previousChoiceOption.img}
+                        src={resultPreviousChoice.img}
                         alt=""
                         onError={handleImageError}
                       />
                       <p className="previous-choice-popover-text">
-                        {previousChoiceOption.text}
+                        {resultPreviousChoice.text}
                       </p>
                     </div>
                   )}

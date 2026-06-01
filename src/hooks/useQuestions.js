@@ -204,6 +204,8 @@ export function useQuestions() {
           status: response.status,
           mySelectedOptionId: data.mySelectedOptionId ?? null,
           mySelectedOptionText: data.mySelectedOptionText ?? null,
+          previousSelectedOptionId: data.previousSelectedOptionId ?? null,
+          previousSelectedOptionText: data.previousSelectedOptionText ?? null,
         };
       }
 

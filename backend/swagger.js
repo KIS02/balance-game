@@ -116,6 +116,16 @@ const options = {
             result: { $ref: "#/components/schemas/Question" },
             mySelectedOptionId: { type: "number", example: 2 },
             mySelectedOptionText: { type: "string", example: "카카오" },
+            previousSelectedOptionId: {
+              type: "number",
+              nullable: true,
+              example: 1,
+            },
+            previousSelectedOptionText: {
+              type: "string",
+              nullable: true,
+              example: "네이버",
+            },
           },
         },
         ErrorResponse: {
@@ -363,6 +373,8 @@ const options = {
                     },
                     mySelectedOptionId: 2,
                     mySelectedOptionText: "카카오",
+                    previousSelectedOptionId: 1,
+                    previousSelectedOptionText: "네이버",
                   },
                 },
               },

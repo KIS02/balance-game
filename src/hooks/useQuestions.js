@@ -202,8 +202,8 @@ export function useQuestions() {
           message: data.message || "",
           success: Boolean(data.success),
           status: response.status,
-          isDuplicate: response.status === 409,
           mySelectedOptionId: data.mySelectedOptionId ?? null,
+          mySelectedOptionText: data.mySelectedOptionText ?? null,
         };
       }
 

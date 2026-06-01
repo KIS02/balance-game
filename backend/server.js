@@ -205,27 +205,16 @@ const getQuestionResult = async (db, questionId) => {
   };
 };
 
-const getUserVoteSelection = async (db, userId, questionId) => {
-  const [rows] = await db.query(
-    `
-    SELECT r.selected_option_id AS optionId
-    FROM responses r
-    WHERE r.user_id = ? AND r.question_id = ?
-    LIMIT 1
-    `,
-    [userId, questionId]
+const buildVoteSelectionPayload = (optionId, result) => {
+  const selectedOption = result?.options?.find(
+    (option) => Number(option.id) === Number(optionId)
   );
 
-  if (rows.length === 0) {
-    return { mySelectedOptionId: null };
-  }
-
-  return { mySelectedOptionId: rows[0].optionId };
+  return {
+    mySelectedOptionId: Number(optionId),
+    mySelectedOptionText: selectedOption?.text ?? null,
+  };
 };
-
-const buildVoteSelectionPayload = (optionId) => ({
-  mySelectedOptionId: Number(optionId),
-});
 
 app.get("/api/health", async (req, res) => {
   try {
@@ -367,13 +356,34 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
       });
     }
 
-    await connection.query(
+    const [existingRows] = await connection.query(
       `
-      INSERT INTO responses (user_id, question_id, selected_option_id)
-      VALUES (?, ?, ?)
+      SELECT id
+      FROM responses
+      WHERE user_id = ? AND question_id = ?
+      LIMIT 1
       `,
-      [user.id, questionId, optionId]
+      [user.id, questionId]
     );
+
+    if (existingRows.length > 0) {
+      await connection.query(
+        `
+        UPDATE responses
+        SET selected_option_id = ?
+        WHERE user_id = ? AND question_id = ?
+        `,
+        [optionId, user.id, questionId]
+      );
+    } else {
+      await connection.query(
+        `
+        INSERT INTO responses (user_id, question_id, selected_option_id)
+        VALUES (?, ?, ?)
+        `,
+        [user.id, questionId, optionId]
+      );
+    }
 
     const result = await getQuestionResult(connection, questionId);
 
@@ -382,27 +392,10 @@ app.post("/api/questions/:questionId/vote", async (req, res) => {
     res.json({
       success: true,
       result,
-      ...buildVoteSelectionPayload(optionId),
+      ...buildVoteSelectionPayload(optionId, result),
     });
   } catch (error) {
     await connection.rollback();
-
-    if (error.code === "ER_DUP_ENTRY") {
-      const result = await getQuestionResult(pool, questionId);
-
-      let voteSelection = { mySelectedOptionId: null };
-
-      if (user) {
-        voteSelection = await getUserVoteSelection(pool, user.id, questionId);
-      }
-
-      return res.status(409).json({
-        success: false,
-        message: "이미 투표한 질문입니다.",
-        result,
-        ...voteSelection,
-      });
-    }
 
     if (error.status === 401) {
       return res.status(401).json({

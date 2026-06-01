@@ -242,11 +242,7 @@ function App() {
         saveUserVote(currentQuestion.id, savedOptionId);
         setShowPreviousChoicePopover(false);
         setResultImg(resultImage || selectedImage);
-        setVoteMessage(
-          voteResult.isDuplicate
-            ? voteResult.message || "이미 투표한 질문입니다."
-            : voteResult.message || ""
-        );
+        setVoteMessage(voteResult.message || "");
         setShowResult(true);
         return;
       }

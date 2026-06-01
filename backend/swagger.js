@@ -114,17 +114,8 @@ const options = {
           properties: {
             success: { type: "boolean", example: true },
             result: { $ref: "#/components/schemas/Question" },
-          },
-        },
-        DuplicateVoteResponse: {
-          type: "object",
-          properties: {
-            success: { type: "boolean", example: false },
-            message: {
-              type: "string",
-              example: "이미 투표한 질문입니다.",
-            },
-            result: { $ref: "#/components/schemas/Question" },
+            mySelectedOptionId: { type: "number", example: 2 },
+            mySelectedOptionText: { type: "string", example: "카카오" },
           },
         },
         ErrorResponse: {
@@ -319,7 +310,8 @@ const options = {
       "/api/questions/{questionId}/vote": {
         post: {
           summary: "특정 질문의 선택지에 투표",
-          description: "Authorization 헤더에 Google access token을 Bearer 토큰으로 전달해야 합니다.",
+          description:
+            "Authorization 헤더에 Google access token을 Bearer 토큰으로 전달해야 합니다. 이미 투표한 질문이면 selected_option_id를 갱신합니다.",
           tags: ["Questions"],
           security: [{ googleAccessToken: [] }],
           parameters: [
@@ -369,6 +361,8 @@ const options = {
                         },
                       ],
                     },
+                    mySelectedOptionId: 2,
+                    mySelectedOptionText: "카카오",
                   },
                 },
               },
@@ -392,36 +386,6 @@ const options = {
                         success: false,
                         message: "Google 인증에 실패했습니다.",
                       },
-                    },
-                  },
-                },
-              },
-            },
-            409: {
-              description: "이미 투표한 질문이며 기존 결과 반환",
-              content: {
-                "application/json": {
-                  schema: { $ref: "#/components/schemas/DuplicateVoteResponse" },
-                  example: {
-                    success: false,
-                    message: "이미 투표한 질문입니다.",
-                    result: {
-                      id: 1,
-                      title: "네이버 vs 카카오",
-                      options: [
-                        {
-                          id: 1,
-                          text: "네이버",
-                          voteCount: 2,
-                          imageUrl: "/images/naver.png",
-                        },
-                        {
-                          id: 2,
-                          text: "카카오",
-                          voteCount: 3,
-                          imageUrl: "/images/kakao.png",
-                        },
-                      ],
                     },
                   },
                 },

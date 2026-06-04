@@ -22,9 +22,9 @@ Users can sign in with their Google account, choose one option between two choic
 
 ### 3. Previous Selection Check
 
-- Shows the option previously selected by the logged-in user.
+- Shows the user's previously selected option only when it is different from the option currently selected.
 - Displays previous selection information based on the server response.
-- Allows users to check their past choice through the previous selection button in the result modal.
+- Allows users to compare their current choice with their past choice through the previous selection button in the result modal.
 
 ### 4. Comment Feature
 
@@ -64,59 +64,80 @@ Users can sign in with their Google account, choose one option between two choic
 
 ### Deployment
 
-- Frontend: Vercel
+- Frontend: Render
 - Backend: Render
 
 ## Project Structure
 
     balance-game
     ├── backend
+    │   ├── migrations
     │   ├── server.js
-    │   ├── package.json
-    │   └── swagger.js
+    │   ├── swagger.js
+    │   └── package.json
     ├── public
-    │   └── images
+    │   ├── images
+    │   ├── favicon.svg
+    │   └── icons.svg
     ├── src
+    │   ├── assets
     │   ├── components
+    │   ├── constants
     │   ├── hooks
+    │   ├── services
+    │   ├── utils
     │   ├── App.jsx
     │   └── main.jsx
+    ├── index.html
     ├── package.json
+    ├── vite.config.js
     └── README.md
 
 ## How to Run
 
-### 1. Run the Frontend
-
-    npm install
-    npm run dev
-
-### 2. Run the Backend
+### 1. Run the Backend
 
     cd backend
     npm install
     npm run dev
 
+### 2. Run the Frontend
+
+Open a new terminal in the project root directory and run:
+
+    npm install
+    npm run dev
+
 ## API Documentation
 
-After running the backend server, the Swagger API documentation can be accessed through the following endpoint:
-
-    /api-docs
-
-Example for local development:
+After running the backend Express server locally, the Swagger UI can be accessed at:
 
     http://localhost:3001/api-docs
 
+The default backend port is `3001`. If the `PORT` environment variable is changed, use the corresponding port instead:
+
+    http://localhost:{PORT}/api-docs
+
+In a deployed environment, the Swagger UI can be accessed by adding `/api-docs` to the backend server URL.
+
+Example:
+
+    https://<backend-host>/api-docs
+
+The OpenAPI specification is defined in `backend/swagger.js`, and Swagger UI is mounted at `/api-docs` in `backend/server.js`.
+
 ## Main API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | /api/questions | Get all questions |
-| POST | /api/questions/:questionId/vote | Submit a vote |
-| POST | /api/auth/google | Google login |
-| GET | /api/questions/:questionId/comments | Get comments for a question |
-| POST | /api/questions/:questionId/comments | Create a comment |
-| DELETE | /api/comments/:commentId | Delete a comment |
+| Method | Endpoint                                 | Description                                                                    |
+| ------ | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| GET    | `/api/health`                            | Checks backend and database connection status                                  |
+| GET    | `/api/questions`                         | Gets all questions with options, vote counts, and image URLs                   |
+| POST   | `/api/auth/google`                       | Verifies a Google access token and creates or updates the user in the database |
+| POST   | `/api/questions/:questionId/vote`        | Submits or updates a user's vote for a question                                |
+| GET    | `/api/questions/:questionId/comments`    | Gets comments for a question, including the user's own comment status          |
+| POST   | `/api/questions/:questionId/comments`    | Creates one comment for the logged-in user on a question                       |
+| DELETE | `/api/questions/:questionId/comments/me` | Deletes the logged-in user's own comment on a question                         |
+
 
 ## Database Overview
 

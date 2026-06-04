@@ -108,23 +108,12 @@ Open a new terminal in the project root directory and run:
     npm install
     npm run dev
 
-## API Documentation
+## Project Links
 
-After running the backend Express server locally, the Swagger UI can be accessed at:
+- Frontend: https://balance-game-frontend.onrender.com
+- Backend API: https://balance-game-backend-gihu.onrender.com
+- Swagger UI: https://balance-game-backend-gihu.onrender.com/api-docs
 
-    http://localhost:3001/api-docs
-
-The default backend port is `3001`. If the `PORT` environment variable is changed, use the corresponding port instead:
-
-    http://localhost:{PORT}/api-docs
-
-In a deployed environment, the Swagger UI can be accessed by adding `/api-docs` to the backend server URL.
-
-Example:
-
-    https://<backend-host>/api-docs
-
-The OpenAPI specification is defined in `backend/swagger.js`, and Swagger UI is mounted at `/api-docs` in `backend/server.js`.
 
 ## Main API Endpoints
 
